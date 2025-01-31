@@ -42,11 +42,19 @@ You can create a PDF showing the PQRST labeling.
 python edf2pdf.py --edf example_output/original_ecg.edf --pqrst example_output/pqrst.csv
 ```
 
+You can also view the entire ECG. Note that this method might not be reasonable for large files.
+
+```
+python edf2pdf.py --edf example_output/original_ecg.edf --pqrst example_output/pqrst.csv --max_pages -1
+```
+
 ### Stats
 
 ```
 python calculate_averages.py --intervals example_output/intervals.csv
 ```
+
+Output:
 
 ```
 Heart Rate                99.227244
