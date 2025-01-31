@@ -38,7 +38,6 @@ def ecg_to_pdf(sampling_rate: float, output_path: str, tracings, labels=None, le
     tracings : Union[None, np.array, list]
         A 2D-array of the original ecg signal. The first axis represents the different leads. The
         second axis represents samples across time.
-        If None is given then no tracings will be plotted.
     labels: Union[None, np.array, list]
         A 1D-array of the labels across time. This must have the same size as tracings and reconstructions'
         second axis, if labels is not None and either tracings or reconstructions are not None.
@@ -137,12 +136,12 @@ def ecg_to_pdf(sampling_rate: float, output_path: str, tracings, labels=None, le
     with PdfPages(output_path) as pdf:
         for page_i in tqdm(range(num_pages)):
             page = plt.figure(figsize=figsize)
+            grid_sections = gridspec.GridSpec(
+                figs_per_page, 1, wspace=0.2, hspace=0.2)
 
             # Only add as many figures as are needed
             page_figures = min(figs_per_page, num_of_figs -
                                page_i * figs_per_page)
-            grid_sections = gridspec.GridSpec(
-                page_figures, 1, wspace=0.2, hspace=0.2)
 
             for i in range(page_figures):
                 grid_leads = gridspec.GridSpecFromSubplotSpec(n_leads, 1,
