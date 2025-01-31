@@ -1,0 +1,7 @@
+matplotlib==3.10.0
+numpy==2.2.2
+tqdm==4.67.1
+pandas==2.2.3
+pyedflib==0.1.39
+python_dotenv==1.0.1
+requests==2.32.3
