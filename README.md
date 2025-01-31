@@ -41,3 +41,22 @@ You can create a PDF showing the PQRST labeling.
 ```
 python edf2pdf.py --edf example_output/original_ecg.edf --pqrst example_output/pqrst.csv
 ```
+
+### Stats
+
+```
+python calculate_averages.py --intervals example_output/intervals.csv
+```
+
+```
+Heart Rate                99.227244
+RR                       609.107335
+P Wave Duration           67.192666
+PR Segment                45.653085
+PR Interval              112.845751
+QRS Interval              70.949172
+T Wave Duration          168.340982
+ST Segment                73.928551
+QT Interval              313.218705
+QT Corrected (Bazett)    401.961588
+```
