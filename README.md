@@ -1,6 +1,22 @@
 # ECG Scripts
 
-## Analyize and EDF
+This repository includes examples on how to analyize ECGs using NeuralCloud Solutions REST API.
+
+An ECG is sent to the API as an EDF file. The file is then queued and processed. Once the analysis is done you can download the results.
+
+#### Results
+
+- P Wave Onset and Offset
+- QRS Complex Onset and Offset
+- T Wave Onset and Offset
+- PR Interval
+- RR Interval
+- QT and QTc
+- HR
+- Duration of Waves and QRS Complex
+- PR Segment and ST Segment
+
+## Analyize EDF
 
 ### Setup
 
