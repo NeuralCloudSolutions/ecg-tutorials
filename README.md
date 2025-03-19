@@ -23,7 +23,7 @@ An ECG is sent to the API as an EDF file. The file is then queued and processed.
 You will need to have Python installed and pip.
 
 ```
-git clone https://github.com/NeuralCloudSolutions/ecg-scripts.git
+git clone https://github.com/NeuralCloudSolutions/ecg-tutorials.git
 cd ecg-scripts
 pip install -r requirements.txt
 ```
