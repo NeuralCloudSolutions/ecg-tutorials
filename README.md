@@ -1,4 +1,4 @@
-# ECG Scripts
+# ECG Tutorials
 
 This repository includes examples on how to analyize ECGs using NeuralCloud Solutions REST API.
 
@@ -24,7 +24,7 @@ You will need to have Python installed and pip.
 
 ```
 git clone https://github.com/NeuralCloudSolutions/ecg-tutorials.git
-cd ecg-scripts
+cd ecg-tutorials
 pip install -r requirements.txt
 ```
 
