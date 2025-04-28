@@ -8,6 +8,14 @@ import visualizer.ecg_plot as ecg_plot
 from data_utils.normalize_signal import normalize_signal, NormalizeMethod
 
 
+class Region:
+    def __init__(self, start, end, alpha=0.25, color='red'):
+        self.start = start
+        self.end = end
+        self.alpha = alpha
+        self.color = color
+
+
 def start_index_gen(tracing_length, chunk_size, num_of_figs):
     if tracing_length is None:
         yield from [0]*num_of_figs
@@ -22,7 +30,13 @@ def start_index_gen(tracing_length, chunk_size, num_of_figs):
             0, tracing_length - chunk_size, num_of_figs))
 
 
-def ecg_to_pdf(sampling_rate: float, output_path: str, tracings, labels=None, lead_names=None, max_pages: int = -1):
+def ecg_to_pdf(
+        sampling_rate: float,
+        output_path: str,
+        tracings, labels=None,
+        lead_names=None,
+        regions=None,
+        max_pages: int = -1):
     """
     **Converts tracings, reconstructions, and/or labels into a pdf**
 
@@ -43,6 +57,8 @@ def ecg_to_pdf(sampling_rate: float, output_path: str, tracings, labels=None, le
         second axis, if labels is not None and either tracings or reconstructions are not None.
         0 represents no wave, 1 represents a P-wave, 2 represents a QRS complex, 3 represents a T-wave.
         If None is given then no labels will be plotted.
+    regions: Union[None,  list]
+        A list of regions. Will highlight an area on the ECG. See the class Region above.
     lead_names : Union[None, list]
         The names of each lead.
         If None is given then all lead names will be empty strings
@@ -87,6 +103,9 @@ def ecg_to_pdf(sampling_rate: float, output_path: str, tracings, labels=None, le
           tracings.shape[1] != labels.shape[0]):
         raise ValueError(
             f"tracing's shape is {tracings.shape} which is incompatible with label's shape {labels.shape}")
+
+    if regions is not None:
+        regions = sorted(regions, key=lambda x: x.start)
 
     n_leads = tracings.shape[0]
     tracing_length = tracings.shape[1]
@@ -164,6 +183,46 @@ def ecg_to_pdf(sampling_rate: float, output_path: str, tracings, labels=None, le
 
                     ecg_plot.ax_plot_grid(
                         ax, seconds_per_fig, amplitude_ecg=1.8, alpha=0.1)
+
+                    if regions is not None:
+                        regions_start_idx = 0
+                        regions_end_idx = 0
+
+                        while regions_start_idx < len(regions):
+                            region = regions[regions_start_idx]
+                            region_start = (
+                                sampling_rate * region.end / 1000.0)
+                            if region_start >= start:
+                                break
+                            regions_start_idx += 1
+
+                        regions_end_idx = regions_start_idx
+                        while regions_end_idx < len(regions):
+                            region_end = (
+                                sampling_rate * region.start / 1000.0)
+                            if region_end >= end:
+                                break
+                            regions_end_idx += 1
+
+                        for i in range(regions_start_idx, regions_end_idx):
+                            region = regions[i]
+
+                            chuck_start = start / 250.0
+
+                            region_start = region.start / 1000.0 - chuck_start
+                            region_end = region.end / 1000.0 - chuck_start
+
+                            region_start = np.clip(
+                                region_start, 0, seconds_per_fig)
+                            region_end = np.clip(
+                                region_end, 0, seconds_per_fig)
+
+                            ecg_plot.ax_plot_region(
+                                ax,
+                                region_start,
+                                region_end,
+                                alpha=region.alpha,
+                                color=region.color)
 
                     if labels_one_hot is not None:
                         labels_chunk = labels_one_hot[start:end]

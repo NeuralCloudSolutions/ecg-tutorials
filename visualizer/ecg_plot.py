@@ -24,6 +24,10 @@ def ax_plot_signal(ax, x, y, **kwargs):
     ax.plot(x, y, **kwargs)
 
 
+def ax_plot_region(ax, start, end, alpha=0.25, color='red'):
+    ax.axvspan(start, end, color=color, alpha=alpha)
+
+
 def ax_plot_pqrst(ax, x, labels, alpha=0.25):
     samples = labels.shape[0]
     for i in range(samples - 1):
