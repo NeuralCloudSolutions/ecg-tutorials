@@ -12,6 +12,7 @@ parser.add_argument('--edf', type=str,
                     required=True,
                     help='path to edf')
 parser.add_argument('--json', type=str,
+                    required=True,
                     help='path to json')
 parser.add_argument('--max_pages', type=int,
                     default=1,
