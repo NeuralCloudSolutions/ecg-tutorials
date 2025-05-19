@@ -164,7 +164,7 @@ def report(
                     chunk_idx = np.random.randint(
                         start_idx, end_idx-chunk_size)
 
-                chunk_start = chunk_idx / 250.0
+                chunk_start = chunk_idx / sampling_rate
                 chunk_end = chunk_start + seconds_per_fig
 
                 tracing_chunk = tracings[:, chunk_idx:(chunk_idx+chunk_size)]
@@ -195,7 +195,7 @@ def report(
             end_idx = int(np.clip(start_idx+chunk_size,
                                   0, tracings.shape[1] - 1))
 
-            chunk_start = start_idx / 250.0
+            chunk_start = start_idx / sampling_rate
             chunk_end = chunk_start + seconds_per_fig
 
             tracing_chunk = tracings[:, start_idx:end_idx]
@@ -206,8 +206,8 @@ def report(
                     "Pause duration of {:d} milliseconds - Strip {:.2f} to {:.2f} seconds".format(
                         duration, chunk_start, chunk_end),
                     Region(
-                        (beat_start_idx - start_idx) / 250.0,
-                        (beat_end_idx - start_idx) / 250.0,
+                        (beat_start_idx - start_idx) / sampling_rate,
+                        (beat_end_idx - start_idx) / sampling_rate,
                     )
                 )
             )
@@ -288,7 +288,7 @@ def report(
             end_idx = int(np.clip(start_idx+chunk_size,
                                   0, tracings.shape[1] - 1))
 
-            chunk_start = start_idx / 250.0
+            chunk_start = start_idx / sampling_rate
             chunk_end = chunk_start + seconds_per_fig
 
             tracing_chunk = tracings[:, start_idx:end_idx]
@@ -305,8 +305,8 @@ def report(
 
                 py_events_regions.append(
                     Region(
-                        (beat_start_idx - start_idx) / 250.0,
-                        (beat_end_idx - start_idx) / 250.0,
+                        (beat_start_idx - start_idx) / sampling_rate,
+                        (beat_end_idx - start_idx) / sampling_rate,
                     ))
 
             py_events.append(
