@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -47,15 +49,15 @@ def report(
         ax1 = plt.Subplot(page, grid_plots[1])
 
         stats = analysis_data["stats"]
-        hr_histogram = stats["hr_histogram"]
+        rr_histogram = stats["rr_histogram"]
         qtc_histogram = stats["qtc_histogram"]
 
-        hr_start = hr_histogram["s"]
-        hr_end = hr_histogram["e"]
+        hr_start = rr_histogram["s"]
+        hr_end = rr_histogram["e"]
         x = list(range(hr_start, hr_end+2))
-        y = hr_histogram["bins"]
+        y = rr_histogram["bins"]
         ax0.stairs(y, x, fill=True)
-        ax0.set_title("HR (ms)")
+        ax0.set_title("RR (ms)")
 
         qtc_start = qtc_histogram["s"]
         qtc_end = qtc_histogram["e"]
@@ -80,42 +82,51 @@ def report(
         figs_on_page = 0
         all_events = []
 
-        if "hr" in events:
-            hr_events = events["hr"]
-            min_hr = hr_events["min"]
-            max_hr = hr_events["max"]
-            min_hr_bpm = min_hr["hr"]
-            max_hr_bpm = max_hr["hr"]
+        min_hr_events = events["lowest_hr"]
+        max_hr_events = events["highest_hr"]
 
-            all_events.append((f"Minimum HR ({min_hr_bpm})", min_hr))
-            all_events.append((f"Maximum HR ({max_hr_bpm})", max_hr))
+        if len(min_hr_events) > 0:
+            hr_event = min_hr_events[0]
+            hr = hr_event["hr"]
+
+            all_events.append((f"Minimum HR ({hr})", hr_event))
+
+        if len(max_hr_events) > 0:
+            hr_event = max_hr_events[0]
+            hr = hr_event["hr"]
+
+            all_events.append((f"Maximum HR ({hr})", hr_event))
 
         afib_events = events["afib"]
         bradycardia_events = events["bradycardia"]
         tachycardia_events = events["tachycardia"]
 
-        for event in afib_events:
-            all_events.append(("AFIB", event))
+        if len(afib_events) <= 5:
+            for event in afib_events:
+                all_events.append(("AFIB", event))
+        else:
+            for event in random.choices(afib_events, k=5):
+                all_events.append(("AFIB", event))
 
         top_bradycardia_events = []
         top_tachycardia_events = []
         for event in bradycardia_events:
             top_bradycardia_events.append((
-                event["hr_avg"],
-                "Bradycardia: Mean {} BPM".format(event["hr_avg"]),
-                event["region"]))
+                event["hr"],
+                "Bradycardia: Mean {} BPM".format(event["hr"]),
+                event))
         for event in tachycardia_events:
             top_tachycardia_events.append((
-                event["hr_avg"],
-                "Tachycardia: Mean {} BPM".format(event["hr_avg"]),
-                event["region"]))
+                event["hr"],
+                "Tachycardia: Mean {} BPM".format(event["hr"]),
+                event))
 
         top_bradycardia_events = sorted(
             top_bradycardia_events, key=lambda tup: tup[0])
         top_tachycardia_events = sorted(
             top_tachycardia_events, key=lambda tup: tup[0], reverse=True)
 
-        if len(top_bradycardia_events) < 5:
+        if len(top_bradycardia_events) <= 5:
             for _, title, event in top_bradycardia_events:
                 all_events.append((title, event))
         else:
@@ -123,7 +134,7 @@ def report(
                 _, title, event = top_bradycardia_events[i]
                 all_events.append((title, event))
 
-        if len(top_tachycardia_events) < 5:
+        if len(top_tachycardia_events) <= 5:
             for _, title, event in top_tachycardia_events:
                 all_events.append((title, event))
         else:
@@ -167,6 +178,9 @@ def report(
                 )
 
         pauses_events = events["pauses"]
+        if len(pauses_events) > 5:
+            pauses_events = random.choices(pauses_events, k=5)
+
         for pauses_event in pauses_events:
             start = pauses_event["s"]
             end = pauses_event["e"]
@@ -257,6 +271,9 @@ def report(
             ))
 
             pvc_beat_event_idx = next_beat_event_idx
+
+        if len(beat_events) > 5:
+            beat_events = random.choices(beat_events, k=5)
 
         for title, regions in beat_events:
             start = regions[0].start

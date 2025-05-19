@@ -50,6 +50,14 @@ By default the files from the analysis will be saved in the folder `out`. You ca
 python analyze_edf.py --edf example_output/original_ecg.edf --out my_output_folder
 ```
 
+### Batch Run
+
+To run a batch job on multiple files:
+
+```
+python run_all_edfs.py --path path/to/input/edfs --out path/to/output/dir
+```
+
 ### Visualize
 
 You can create a PDF showing the PQRST labeling.
@@ -62,6 +70,18 @@ You can also view the entire ECG. Note that this method might not be reasonable 
 
 ```
 python edf2pdf.py --edf example_output/original_ecg.edf --pqrst example_output/pqrst.csv --max_pages -1
+```
+
+You can create a PDF showing the events.
+
+```
+python edf_events.py --edf example_output/original_ecg.edf --json example_output/analysis.json
+```
+
+You can create a PDF a mock report.
+
+```
+python edf_report.py --edf example_output/original_ecg.edf --json example_output/analysis.json
 ```
 
 ### Stats
