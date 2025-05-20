@@ -272,82 +272,83 @@ for edf_path in get_edfs(args.path):
         save_tracing(os.path.join(folder_path, 'ecg.edf'), d,
                      os.path.join(folder_path, 'clean_tracing.pdf'))
 
-        # Load EDF
-        edf_file = pyedflib.EdfReader(edf_path)
+        if 'events' in d and 'stats' in d:
+            # Load EDF
+            edf_file = pyedflib.EdfReader(edf_path)
 
-        n_leads = len(edf_file.getNSamples())
-        signal_length = edf_file.getNSamples()[0]
-        tracings = np.empty((n_leads, signal_length))
-        for i in range(n_leads):
-            sampling_rate = edf_file.getSampleFrequencies()[i]
-            tracing = edf_file.readSignal(i)
-            tracings[i, :] = tracing
+            n_leads = len(edf_file.getNSamples())
+            signal_length = edf_file.getNSamples()[0]
+            tracings = np.empty((n_leads, signal_length))
+            for i in range(n_leads):
+                sampling_rate = edf_file.getSampleFrequencies()[i]
+                tracing = edf_file.readSignal(i)
+                tracings[i, :] = tracing
 
-        # Save
-        print('Saving Report ...')
-        report(
-            tracings,
-            sampling_rate,
-            d,
-            os.path.join(folder_path, 'report.pdf')
-        )
+            # Save
+            print('Saving Report ...')
+            report(
+                tracings,
+                sampling_rate,
+                d,
+                os.path.join(folder_path, 'report.pdf')
+            )
 
-        regions = []
+            regions = []
 
-        events = d['events']
+            events = d['events']
 
-        afib_events = events['afib']
-        pac_events = events['pac']
-        pvc_events = events['pvc']
-        av_block_events = events['av_block']
-        pause_events = events['pauses']
+            afib_events = events['afib']
+            pac_events = events['pac']
+            pvc_events = events['pvc']
+            av_block_events = events['av_block']
+            pause_events = events['pauses']
 
-        for event in afib_events:
-            regions.append(
-                Region(
-                    event['s'],
-                    event['e'],
-                    color='red'
-                ))
+            for event in afib_events:
+                regions.append(
+                    Region(
+                        event['s'],
+                        event['e'],
+                        color='red'
+                    ))
 
-        for event in pac_events:
-            regions.append(
-                Region(
-                    event['s'],
-                    event['e'],
-                    color='yellow'
-                ))
+            for event in pac_events:
+                regions.append(
+                    Region(
+                        event['s'],
+                        event['e'],
+                        color='yellow'
+                    ))
 
-        for event in pvc_events:
-            regions.append(
-                Region(
-                    event['s'],
-                    event['e'],
-                    color='orange'
-                ))
+            for event in pvc_events:
+                regions.append(
+                    Region(
+                        event['s'],
+                        event['e'],
+                        color='orange'
+                    ))
 
-        for event in av_block_events:
-            regions.append(
-                Region(
-                    event['s'],
-                    event['e'],
-                    color='green'
-                ))
+            for event in av_block_events:
+                regions.append(
+                    Region(
+                        event['s'],
+                        event['e'],
+                        color='green'
+                    ))
 
-        for event in pause_events:
-            regions.append(
-                Region(
-                    event['s'],
-                    event['e'],
-                    color='blue'
-                ))
+            for event in pause_events:
+                regions.append(
+                    Region(
+                        event['s'],
+                        event['e'],
+                        color='blue'
+                    ))
 
-        # Save
-        print('Saving Events ...')
-        ecg_to_pdf(
-            sampling_rate=sampling_rate,
-            output_path=os.path.join(folder_path, 'events.pdf'),
-            tracings=tracings,
-            regions=regions,
-            max_pages=args.max_pages
-        )
+            # Save
+            print('Saving Events ...')
+            ecg_to_pdf(
+                sampling_rate=sampling_rate,
+                output_path=os.path.join(folder_path, 'events.pdf'),
+                tracings=tracings,
+                regions=regions,
+                max_pages=args.max_pages
+            )
