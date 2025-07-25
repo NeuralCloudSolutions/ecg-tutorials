@@ -58,6 +58,12 @@ To run a batch job on multiple files:
 python run_all_edfs.py --path path/to/input/edfs --out path/to/output/dir
 ```
 
+To see all options run:
+
+```
+python run_all_edfs.py -h
+```
+
 ### Visualize
 
 You can create a PDF showing the PQRST labeling.

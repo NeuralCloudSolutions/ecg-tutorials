@@ -25,11 +25,17 @@ parser.add_argument('--max_pages', type=int,
 parser.add_argument('--out', type=str,
                     default='out',
                     help='path to output folder')
+parser.add_argument('--pdf', action='store_true',
+                    help='include PDFs in output')
 
 args = parser.parse_args()
 
 # Add your API key to the .env file
 API_KEY = os.getenv('API_KEY')
+
+if API_KEY is None or API_KEY.strip() == '':
+    print('Error: No API_KEY found. Please create a file called .env and add the API key. See .env.sample for an example.')
+    exit(1)
 
 if args.path[-1] != '/':
     args.path += '/'
@@ -84,7 +90,12 @@ def analyze(edf_file, out_path):
     response = requests.post('https://api.theneuralcloud.com/api/v1/files',
                              headers=headers,
                              data=json.dumps(payload))
-    print(response)
+
+    if response.status_code != 200:
+        print(response.content)
+        print('Error: Failed to launch the job.')
+        exit(1)
+
     data = response.json()
 
     upload_url = data['file']['upload']['url']
@@ -136,15 +147,17 @@ def analyze(edf_file, out_path):
                                      'Authorization': f'Bearer {API_KEY}'
                                  },
                                  data=json.dumps(job_payload))
+
+    if job_response.status_code != 201:
+        print(job_response.content)
+        print('Error: Failed to launch the job.')
+        exit(1)
+
     job_data = job_response.json()
     job_id = job_data['job']['id']
     job_status = job_data['job']['status']
 
     print(f'Launched a new job with ID {job_id} (status \'{job_status}\')')
-
-    if job_response.status_code != 201:
-        print('Failed to launch the job')
-        exit(1)
 
     # Check job status until completion
     url = f'https://api.theneuralcloud.com/api/v1/jobs/{job_id}'
@@ -264,91 +277,92 @@ for edf_path in get_edfs(args.path):
     # Analyze file
     analyze(edf_path, folder_path)
 
-    print('Loading JSON ...')
-    with open(os.path.join(folder_path, 'analysis.json')) as f:
-        d = json.load(f)
+    if args.pdf:
+        print('Loading JSON ...')
+        with open(os.path.join(folder_path, 'analysis.json')) as f:
+            d = json.load(f)
 
-        save_tracing(edf_path, d, os.path.join(folder_path, 'tracing.pdf'))
-        save_tracing(os.path.join(folder_path, 'ecg.edf'), d,
-                     os.path.join(folder_path, 'clean_tracing.pdf'))
+            save_tracing(edf_path, d, os.path.join(folder_path, 'tracing.pdf'))
+            save_tracing(os.path.join(folder_path, 'ecg.edf'), d,
+                         os.path.join(folder_path, 'clean_tracing.pdf'))
 
-        if 'events' in d and 'stats' in d:
-            # Load EDF
-            edf_file = pyedflib.EdfReader(edf_path)
+            if 'events' in d and 'stats' in d:
+                # Load EDF
+                edf_file = pyedflib.EdfReader(edf_path)
 
-            n_leads = len(edf_file.getNSamples())
-            signal_length = edf_file.getNSamples()[0]
-            tracings = np.empty((n_leads, signal_length))
-            for i in range(n_leads):
-                sampling_rate = edf_file.getSampleFrequencies()[i]
-                tracing = edf_file.readSignal(i)
-                tracings[i, :] = tracing
+                n_leads = len(edf_file.getNSamples())
+                signal_length = edf_file.getNSamples()[0]
+                tracings = np.empty((n_leads, signal_length))
+                for i in range(n_leads):
+                    sampling_rate = edf_file.getSampleFrequencies()[i]
+                    tracing = edf_file.readSignal(i)
+                    tracings[i, :] = tracing
 
-            # Save
-            print('Saving Report ...')
-            report(
-                tracings,
-                sampling_rate,
-                d,
-                os.path.join(folder_path, 'report.pdf')
-            )
+                # Save
+                print('Saving Report ...')
+                report(
+                    tracings,
+                    sampling_rate,
+                    d,
+                    os.path.join(folder_path, 'report.pdf')
+                )
 
-            regions = []
+                regions = []
 
-            events = d['events']
+                events = d['events']
 
-            afib_events = events['afib']
-            pac_events = events['pac']
-            pvc_events = events['pvc']
-            av_block_events = events['av_block']
-            pause_events = events['pauses']
+                afib_events = events['afib']
+                pac_events = events['pac']
+                pvc_events = events['pvc']
+                av_block_events = events['av_block']
+                pause_events = events['pauses']
 
-            for event in afib_events:
-                regions.append(
-                    Region(
-                        event['s'],
-                        event['e'],
-                        color='red'
-                    ))
+                for event in afib_events:
+                    regions.append(
+                        Region(
+                            event['s'],
+                            event['e'],
+                            color='red'
+                        ))
 
-            for event in pac_events:
-                regions.append(
-                    Region(
-                        event['s'],
-                        event['e'],
-                        color='yellow'
-                    ))
+                for event in pac_events:
+                    regions.append(
+                        Region(
+                            event['s'],
+                            event['e'],
+                            color='yellow'
+                        ))
 
-            for event in pvc_events:
-                regions.append(
-                    Region(
-                        event['s'],
-                        event['e'],
-                        color='orange'
-                    ))
+                for event in pvc_events:
+                    regions.append(
+                        Region(
+                            event['s'],
+                            event['e'],
+                            color='orange'
+                        ))
 
-            for event in av_block_events:
-                regions.append(
-                    Region(
-                        event['s'],
-                        event['e'],
-                        color='green'
-                    ))
+                for event in av_block_events:
+                    regions.append(
+                        Region(
+                            event['s'],
+                            event['e'],
+                            color='green'
+                        ))
 
-            for event in pause_events:
-                regions.append(
-                    Region(
-                        event['s'],
-                        event['e'],
-                        color='blue'
-                    ))
+                for event in pause_events:
+                    regions.append(
+                        Region(
+                            event['s'],
+                            event['e'],
+                            color='blue'
+                        ))
 
-            # Save
-            print('Saving Events ...')
-            ecg_to_pdf(
-                sampling_rate=sampling_rate,
-                output_path=os.path.join(folder_path, 'events.pdf'),
-                tracings=tracings,
-                regions=regions,
-                max_pages=args.max_pages
-            )
+                # Save
+                print('Saving Events ...')
+                ecg_to_pdf(
+                    sampling_rate=sampling_rate,
+                    output_path=os.path.join(folder_path, 'events.pdf'),
+                    tracings=tracings,
+                    regions=regions,
+                    max_pages=args.max_pages
+                )

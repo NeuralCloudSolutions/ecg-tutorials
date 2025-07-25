@@ -22,17 +22,24 @@ args = parser.parse_args()
 # Add your API key to the .env file
 API_KEY = os.getenv('API_KEY')
 
+if API_KEY is None or API_KEY.strip() == '':
+    print('Error: No API_KEY found. Please create a file called .env and add the API key. See .env.sample for an example.')
+    exit(1)
+
 # File information
 edf_file = args.edf
 file_size = os.path.getsize(edf_file)
 
 # Calculate MD5 hash
+
+
 def calculate_md5(file_path):
     md5_hash = hashlib.md5()
     with open(file_path, 'rb') as file:
         for chunk in iter(lambda: file.read(4096), b''):
             md5_hash.update(chunk)
     return md5_hash.hexdigest()
+
 
 md5sum = calculate_md5(edf_file)
 
@@ -66,11 +73,12 @@ print(f"Created a new API File with ID: {file_id}")
 #
 print(f"Uploading file to {upload_url}")
 upload_response = requests.put(upload_url,
-                              headers=upload_headers,
-                              data=open(edf_file, 'rb'))
+                               headers=upload_headers,
+                               data=open(edf_file, 'rb'))
 
 if upload_response.status_code != 200:
-    print(f"Failed to upload the file. Status code: {upload_response.status_code}")
+    print(
+        f"Failed to upload the file. Status code: {upload_response.status_code}")
     exit(1)
 
 print("Uploaded the file successfully")
@@ -80,7 +88,7 @@ print("Uploaded the file successfully")
 #
 print("Confirming the file was uploaded")
 confirmation_response = requests.post(confirmation_url,
-                                     headers={'Authorization': f'Bearer {API_KEY}'})
+                                      headers={'Authorization': f'Bearer {API_KEY}'})
 confirmation_data = confirmation_response.json()
 file_status = confirmation_data['file']['status']
 
@@ -97,20 +105,21 @@ job_payload = {
     'file_id': file_id
 }
 job_response = requests.post('https://api.theneuralcloud.com/api/v1/ecg_wave_analysis',
-                            headers={
-                                'Content-Type': 'application/json',
-                                'Authorization': f'Bearer {API_KEY}'
-                            },
-                            data=json.dumps(job_payload))
+                             headers={
+                                 'Content-Type': 'application/json',
+                                 'Authorization': f'Bearer {API_KEY}'
+                             },
+                             data=json.dumps(job_payload))
+
+if job_response.status_code != 201:
+    print("Failed to launch the job")
+    exit(1)
+
 job_data = job_response.json()
 job_id = job_data['job']['id']
 job_status = job_data['job']['status']
 
 print(f"Launched a new job with ID {job_id} (status '{job_status}')")
-
-if job_response.status_code != 201:
-    print("Failed to launch the job")
-    exit(1)
 
 # Check job status until completion
 url = f'https://api.theneuralcloud.com/api/v1/jobs/{job_id}'
