@@ -58,6 +58,14 @@ To run a batch job on multiple files:
 python run_all_edfs.py --path path/to/input/edfs --out path/to/output/dir
 ```
 
+We only support up to 12-lead ECGs. You can specify specific leads to analysis. For example if you want to only look at the first 3 leads you can run:
+
+```
+python run_all_edfs.py --path path/to/input/edfs --out path/to/output/dir --leads 1,2,3
+```
+
+Warning, the lead selection will be applied to every file.
+
 To see all options run:
 
 ```

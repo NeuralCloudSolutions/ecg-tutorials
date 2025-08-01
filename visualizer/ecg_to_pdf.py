@@ -1,5 +1,6 @@
 from tqdm import tqdm
 import numpy as np
+from os.path import join
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_pdf import PdfPages
@@ -33,9 +34,11 @@ def start_index_gen(tracing_length, chunk_size, num_of_figs):
 def ecg_to_pdf(
         sampling_rate: float,
         output_path: str,
-        tracings, labels=None,
-        lead_names=None,
+        tracings=None,
+        reconstructions=None,
+        labels=None,
         regions=None,
+        lead_names=None,
         max_pages: int = -1):
     """
     **Converts tracings, reconstructions, and/or labels into a pdf**
@@ -52,6 +55,12 @@ def ecg_to_pdf(
     tracings : Union[None, np.array, list]
         A 2D-array of the original ecg signal. The first axis represents the different leads. The
         second axis represents samples across time.
+        If None is given then no tracings will be plotted.
+    reconstructions : Union[None, np.array, list]
+        A 2D-array of the cleaned ecg signal. The first axis represents the different leads. The
+        second axis represents samples across time. This must have the same shape as tracings, if
+        both are not None.
+        If None is given then no reconstructions will be plotted.
     labels: Union[None, np.array, list]
         A 1D-array of the labels across time. This must have the same size as tracings and reconstructions'
         second axis, if labels is not None and either tracings or reconstructions are not None.
@@ -76,8 +85,14 @@ def ecg_to_pdf(
     if isinstance(tracings, list):
         tracings = np.array(tracings)
 
-    elif not isinstance(tracings, np.ndarray):
+    elif tracings is not None and not isinstance(tracings, np.ndarray):
         raise ValueError("tracings dtype not recognized")
+
+    if isinstance(reconstructions, list):
+        reconstructions = np.array(reconstructions)
+
+    elif reconstructions is not None and not isinstance(reconstructions, np.ndarray):
+        raise ValueError("reconstructions dtype not recognized")
 
     if isinstance(labels, list):
         labels = np.array(labels)
@@ -91,25 +106,56 @@ def ecg_to_pdf(
         raise ValueError("lead names must be a list or numpy array")
 
     # Check that values have the correct dimensions
-    if tracings.ndim != 2:
+    if tracings is not None and tracings.ndim != 2:
         raise ValueError(
             f"tracings must be 2-dimensional. Got {tracings.ndim} dimension(s)")
 
+    elif reconstructions is not None and reconstructions.ndim != 2:
+        raise ValueError(
+            f"reconstructions must be 2-dimensional. Got {reconstructions.ndim} dimension(s)")
+
     elif labels is not None and labels.ndim != 1:
         raise ValueError(
-            f"labels must be 1-dimensional. Got {labels.ndim} dimensions")
+            f"labels must be 1-dimensional. Got {reconstructions.ndim} dimensions")
 
-    elif (labels is not None and
+    # Check that the shapes are all the same
+    if (tracings is not None and
+        reconstructions is not None and
+            tracings.shape != reconstructions.shape):
+        raise ValueError(
+            f"tracing's shape is {tracings.shape} which is incompatible with reconstruction's shape {reconstructions.shape}")
+
+    elif (tracings is not None and
+          labels is not None and
           tracings.shape[1] != labels.shape[0]):
         raise ValueError(
             f"tracing's shape is {tracings.shape} which is incompatible with label's shape {labels.shape}")
 
-    if regions is not None:
-        regions = sorted(regions, key=lambda x: x.start)
+    elif (reconstructions is not None and
+          labels is not None and
+          reconstructions.shape[1] != labels.shape[0]):
+        raise ValueError(
+            f"reconstruction's shape is {reconstructions.shape} which is incompatible with label's shape {labels.shape}")
 
-    n_leads = tracings.shape[0]
-    tracing_length = tracings.shape[1]
-    seconds = float(tracing_length) / sampling_rate
+    if tracings is not None:
+        n_leads = tracings.shape[0]
+        tracing_length = tracings.shape[1]
+        seconds = float(tracing_length) / sampling_rate
+
+    elif reconstructions is not None:
+        n_leads = reconstructions.shape[0]
+        tracing_length = reconstructions.shape[1]
+        seconds = float(tracing_length) / sampling_rate
+
+    elif labels is not None:
+        n_leads = 1
+        tracing_length = labels.shape[0]
+        seconds = float(tracing_length) / sampling_rate
+
+    else:
+        n_leads = 1
+        tracing_length = None
+        seconds = None
 
     if lead_names is None:
         lead_names = [""]*n_leads
@@ -118,8 +164,15 @@ def ecg_to_pdf(
         raise ValueError(
             f"Number of leads is {n_leads}, but {len(lead_names)} lead names given.")
 
-    labels_one_hot = np.zeros((tracing_length, 4), dtype=np.uint8)
-    labels_one_hot[np.arange(tracing_length), labels] = 1
+    if tracing_length is None:
+        labels_one_hot = None
+
+    else:
+        labels_one_hot = np.zeros((tracing_length, 4), dtype=np.uint8)
+        labels_one_hot[np.arange(tracing_length), labels] = 1
+
+    if regions is not None:
+        regions = sorted(regions, key=lambda x: x.start)
 
     figsize = (8.3, 11.7)
     figs_per_page = 12 // n_leads
@@ -172,6 +225,10 @@ def ecg_to_pdf(
                 for lead in range(n_leads):
                     ax = plt.Subplot(page, grid_leads[lead])
 
+                    tracing_chunk = None
+                    reconstruction_chunk = None
+                    labels_chunk = None
+
                     if tracings is not None:
                         tracing_chunk = tracings[lead, start:end]
                         tracing_chunk, _ = normalize_signal(
@@ -181,8 +238,28 @@ def ecg_to_pdf(
                             tmp[:len(tracing_chunk)] = tracing_chunk
                             tracing_chunk = tmp
 
+                    if reconstructions is not None:
+                        reconstruction_chunk = reconstructions[lead, start:end]
+                        reconstruction_chunk, _ = normalize_signal(
+                            reconstruction_chunk, NormalizeMethod.Z_SCORE)
+                        if len(reconstruction_chunk) < chunk_size:
+                            tmp = np.zeros(chunk_size)
+                            tmp[:len(reconstruction_chunk)
+                                ] = reconstruction_chunk
+                            reconstruction_chunk = tmp
+
                     ecg_plot.ax_plot_grid(
                         ax, seconds_per_fig, amplitude_ecg=1.8, alpha=0.1)
+
+                    if labels_one_hot is not None:
+                        labels_chunk = labels_one_hot[start:end]
+                        if len(labels_chunk) < chunk_size:
+                            tmp = np.zeros((chunk_size, 4), dtype=np.uint8)
+                            tmp[:len(labels_chunk)] = labels_chunk
+                            labels_chunk = tmp
+
+                        ecg_plot.ax_plot_pqrst(
+                            ax, time_x, labels_chunk, alpha=0.75)
 
                     if regions is not None:
                         regions_start_idx = 0
@@ -224,24 +301,41 @@ def ecg_to_pdf(
                                 alpha=region.alpha,
                                 color=region.color)
 
-                    if labels_one_hot is not None:
-                        labels_chunk = labels_one_hot[start:end]
-                        if len(labels_chunk) < chunk_size:
-                            tmp = np.zeros((chunk_size, 4), dtype=np.uint8)
-                            tmp[:len(labels_chunk)] = labels_chunk
-                            labels_chunk = tmp
+                    if tracing_chunk is not None and reconstruction_chunk is not None:
+                        tracing_chunk -= tracing_chunk.mean()
+                        reconstruction_chunk -= reconstruction_chunk.mean()
+                        upper_limit = max(max(tracing_chunk),
+                                          max(reconstruction_chunk))
+                        lower_limit = min(min(tracing_chunk),
+                                          min(reconstruction_chunk))
+                        scaling_factor = 2 * 1.65 / (upper_limit - lower_limit)
 
-                        ecg_plot.ax_plot_pqrst(
-                            ax, time_x, labels_chunk, alpha=0.75)
+                    elif tracing_chunk is not None:
+                        tracing_chunk -= tracing_chunk.mean()
+                        upper_limit = max(tracing_chunk)
+                        lower_limit = min(tracing_chunk)
+                        scaling_factor = 2 * 1.65 / (upper_limit - lower_limit)
 
-                    tracing_chunk -= tracing_chunk.mean()
-                    upper_limit = max(tracing_chunk)
-                    lower_limit = min(tracing_chunk)
-                    scaling_factor = 2 * 1.65 / (upper_limit - lower_limit)
+                    elif reconstruction_chunk is not None:
+                        reconstruction_chunk -= reconstruction_chunk.mean()
+                        upper_limit = max(reconstruction_chunk)
+                        lower_limit = min(reconstruction_chunk)
+                        scaling_factor = 2 * 1.65 / (upper_limit - lower_limit)
 
-                    tracing_chunk = tracing_chunk * scaling_factor
-                    ecg_plot.ax_plot_signal(ax, time_x, tracing_chunk,
-                                            linewidth=0.7, color='black', alpha=1.0)
+                    if tracings is not None:
+                        tracing_chunk = tracing_chunk * scaling_factor
+
+                        if reconstructions is not None:
+                            ecg_plot.ax_plot_signal(ax, time_x, tracing_chunk,
+                                                    linewidth=0.4, color='saddlebrown', alpha=0.8)
+                        else:
+                            ecg_plot.ax_plot_signal(ax, time_x, tracing_chunk,
+                                                    linewidth=0.7, color='black', alpha=1.0)
+
+                    if reconstructions is not None:
+                        reconstruction_chunk = reconstruction_chunk * scaling_factor
+                        ecg_plot.ax_plot_signal(ax, time_x, reconstruction_chunk,
+                                                linewidth=0.7, color='black', alpha=1.0)
 
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
