@@ -8,6 +8,9 @@ import shutil
 import hashlib
 import json
 from dotenv import load_dotenv
+import neurokit2 as nk
+
+DESIRED_SAMPLE_RATE = 250
 
 from visualizer.ecg_to_pdf import Region, ecg_to_pdf
 from visualizer.report import report
@@ -27,6 +30,9 @@ parser.add_argument('--out', type=str,
                     help='path to output folder')
 parser.add_argument('--pdf', action='store_true',
                     help='include PDFs in output')
+parser.add_argument('--leads', type=str,
+                    default='',
+                    help='comma-separated list of leads to process (default: all)')
 
 args = parser.parse_args()
 
@@ -43,6 +49,22 @@ if args.path[-1] != '/':
 if args.out[-1] != '/':
     args.out += '/'
 
+leads = []
+try:
+    included_leads = args.leads.split(',')
+    if included_leads:
+        for lead in included_leads:
+            try:
+                lead = int(lead.strip())
+                if 1 <= lead <= 12:
+                    leads.append(lead)
+            except ValueError:
+                print(f'Invalid lead: {lead}, skipping')
+    if not leads:
+        leads = None
+except Exception as e:
+    print(f'Error processing leads: {e}')
+    leads = None
 
 def get_edfs(path):
     if path.endswith('.edf'):
@@ -139,7 +161,8 @@ def analyze(edf_file, out_path):
     #
     print('Launching the job')
     job_payload = {
-        'file_id': file_id
+        'file_id': file_id,
+        'leads': leads
     }
     job_response = requests.post('https://api.theneuralcloud.com/api/v1/ecg_wave_analysis',
                                  headers={
@@ -261,6 +284,76 @@ def save_tracing(edf_path, json_data, output_path):
     )
 
 
+def save_double_tracing(edf_path, new_edf_path, json_data, output_path):
+    # Load EDF
+    edf_file = pyedflib.EdfReader(edf_path)
+    new_edf_file = pyedflib.EdfReader(new_edf_path)
+
+    total_leads = len(edf_file.getNSamples())
+    if leads is None:
+        leads_to_process = list(range(total_leads))
+    else:
+        # Convert indices
+        leads_to_process = [lead - 1 for lead in leads if 1 <= lead <= total_leads]
+    
+    n_leads = len(leads_to_process)
+    signal_length = int(DESIRED_SAMPLE_RATE /
+                        edf_file.getSampleFrequencies()[0] * edf_file.getNSamples()[0])
+    tracings = np.empty((n_leads, signal_length))
+    for idx, lead_index in enumerate(leads_to_process):
+        sampling_rate = edf_file.getSampleFrequencies()[lead_index]
+        tracing = edf_file.readSignal(lead_index)
+        tracing = nk.signal_resample(
+            tracing, sampling_rate=sampling_rate, desired_sampling_rate=DESIRED_SAMPLE_RATE, method='fft')
+        tracings[idx, :] = tracing
+
+    n_leads2 = len(new_edf_file.getNSamples())
+    signal_length2 = int(DESIRED_SAMPLE_RATE /
+                        new_edf_file.getSampleFrequencies()[0] * new_edf_file.getNSamples()[0])
+    tracings2 = np.empty((n_leads2, signal_length2))
+    for i in range(n_leads2):
+        sampling_rate2 = new_edf_file.getSampleFrequencies()[i]
+        tracing2 = new_edf_file.readSignal(i)
+        tracing2 = nk.signal_resample(
+            tracing2, sampling_rate=sampling_rate2, desired_sampling_rate=DESIRED_SAMPLE_RATE, method='fft')
+        tracings2[i, :] = tracing2
+
+    if tracings.shape[0] != tracings2.shape[0]:
+        min_leads = min(tracings.shape[0], tracings2.shape[0])
+        print(f'Warning: Number of leads in original ({tracings.shape[0]}) and cleaned ({tracings2.shape[0]}) EDFs do not match. Using only the first {min_leads} leads.')
+        tracings = tracings[:min_leads, :]
+        tracings2 = tracings2[:min_leads, :]
+
+    sampling_rate = DESIRED_SAMPLE_RATE
+
+    # Create label array
+    labels = np.zeros((signal_length,), dtype=np.uint8)
+
+    for beat in json_data['beats']:
+        p_waves = beat['p']
+
+        for p in p_waves:
+            update_labels(1, p['s'], p['e'], sampling_rate, labels)
+
+        update_labels(2, beat['qrs']['s'], beat['qrs']
+                      ['e'], sampling_rate, labels)
+
+        if 't' in beat:
+            t_on = beat['t']['s']
+            t_off = beat['t']['e']
+            update_labels(3, t_on, t_off, sampling_rate, labels)
+
+    # Save
+    ecg_to_pdf(
+        sampling_rate=sampling_rate,
+        output_path=output_path,
+        tracings=tracings,
+        reconstructions=tracings2,
+        labels=labels,
+        max_pages=args.max_pages
+    )
+
+
 # Save outputs
 os.makedirs(args.out, exist_ok=True)
 
@@ -283,8 +376,8 @@ for edf_path in get_edfs(args.path):
             d = json.load(f)
 
             save_tracing(edf_path, d, os.path.join(folder_path, 'tracing.pdf'))
-            save_tracing(os.path.join(folder_path, 'ecg.edf'), d,
-                         os.path.join(folder_path, 'clean_tracing.pdf'))
+            save_double_tracing(edf_path, os.path.join(folder_path, 'ecg.edf'), d,
+                        os.path.join(folder_path, 'clean_tracing.pdf'))
 
             if 'events' in d and 'stats' in d:
                 # Load EDF
