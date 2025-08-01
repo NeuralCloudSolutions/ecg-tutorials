@@ -1,19 +1,19 @@
+from visualizer.report import report
+from visualizer.ecg_to_pdf import Region, ecg_to_pdf
 import argparse
 import requests
 import time
 import os
 import numpy as np
 import pyedflib
+import neurokit2 as nk
 import shutil
 import hashlib
 import json
 from dotenv import load_dotenv
-import neurokit2 as nk
 
 DESIRED_SAMPLE_RATE = 250
 
-from visualizer.ecg_to_pdf import Region, ecg_to_pdf
-from visualizer.report import report
 
 load_dotenv()
 
@@ -56,7 +56,7 @@ try:
         for lead in included_leads:
             try:
                 lead = int(lead.strip())
-                if 1 <= lead <= 12:
+                if 1 <= lead:
                     leads.append(lead)
             except ValueError:
                 print(f'Invalid lead: {lead}, skipping')
@@ -65,6 +65,7 @@ try:
 except Exception as e:
     print(f'Error processing leads: {e}')
     leads = None
+
 
 def get_edfs(path):
     if path.endswith('.edf'):
@@ -160,6 +161,9 @@ def analyze(edf_file, out_path):
     # Step 4: Create the job
     #
     print('Launching the job')
+    if leads is not None:
+        print('Only analyzing leads: ', leads)
+
     job_payload = {
         'file_id': file_id,
         'leads': leads
@@ -294,8 +298,9 @@ def save_double_tracing(edf_path, new_edf_path, json_data, output_path):
         leads_to_process = list(range(total_leads))
     else:
         # Convert indices
-        leads_to_process = [lead - 1 for lead in leads if 1 <= lead <= total_leads]
-    
+        leads_to_process = [
+            lead - 1 for lead in leads if 1 <= lead <= total_leads]
+
     n_leads = len(leads_to_process)
     signal_length = int(DESIRED_SAMPLE_RATE /
                         edf_file.getSampleFrequencies()[0] * edf_file.getNSamples()[0])
@@ -309,7 +314,7 @@ def save_double_tracing(edf_path, new_edf_path, json_data, output_path):
 
     n_leads2 = len(new_edf_file.getNSamples())
     signal_length2 = int(DESIRED_SAMPLE_RATE /
-                        new_edf_file.getSampleFrequencies()[0] * new_edf_file.getNSamples()[0])
+                         new_edf_file.getSampleFrequencies()[0] * new_edf_file.getNSamples()[0])
     tracings2 = np.empty((n_leads2, signal_length2))
     for i in range(n_leads2):
         sampling_rate2 = new_edf_file.getSampleFrequencies()[i]
@@ -320,7 +325,8 @@ def save_double_tracing(edf_path, new_edf_path, json_data, output_path):
 
     if tracings.shape[0] != tracings2.shape[0]:
         min_leads = min(tracings.shape[0], tracings2.shape[0])
-        print(f'Warning: Number of leads in original ({tracings.shape[0]}) and cleaned ({tracings2.shape[0]}) EDFs do not match. Using only the first {min_leads} leads.')
+        print(
+            f'Warning: Number of leads in original ({tracings.shape[0]}) and cleaned ({tracings2.shape[0]}) EDFs do not match. Using only the first {min_leads} leads.')
         tracings = tracings[:min_leads, :]
         tracings2 = tracings2[:min_leads, :]
 
@@ -377,7 +383,7 @@ for edf_path in get_edfs(args.path):
 
             save_tracing(edf_path, d, os.path.join(folder_path, 'tracing.pdf'))
             save_double_tracing(edf_path, os.path.join(folder_path, 'ecg.edf'), d,
-                        os.path.join(folder_path, 'clean_tracing.pdf'))
+                                os.path.join(folder_path, 'clean_tracing.pdf'))
 
             if 'events' in d and 'stats' in d:
                 # Load EDF
