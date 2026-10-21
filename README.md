@@ -1,26 +1,25 @@
 # ECG Tutorials
 
-This repository includes examples on how to analyize ECGs using NeuralCloud Solutions REST API.
+This repository shows how to analyze ECGs with the NeuralCloud Solutions REST API and work with the
+results.
 
-An ECG is sent to the API as an EDF file. The file is then queued and processed. Once the analysis is done you can download the results.
+You send an ECG to the API as an EDF file. It is queued and analyzed, and when the analysis is done
+you download the results as an H5 report file. The report holds:
 
-#### Results
+- every beat, with its P wave, QRS complex and T wave onsets and offsets
+- per-beat intervals (RR, PR, QRS, QT, QTc, ST and PR segments), heart rate and signal quality
+- per-beat PAC / PVC and rhythm scores
+- P, Q, R, S and T peak positions and amplitudes, ST levels, and QRS and T shapes, per lead
+- a beat encoding: a 16-number description of each beat's shape, per lead
+- rhythm events (NSR, sinus tachycardia / bradycardia, AF / flutter), PAC / PVC events, pauses
+  and low-quality regions
+- summary metrics: average heart rate, HRV, interval summaries, histograms and hourly statistics
 
-- P Wave Onset and Offset
-- QRS Complex Onset and Offset
-- T Wave Onset and Offset
-- PR Interval
-- RR Interval
-- QT and QTc
-- HR
-- Duration of Waves and QRS Complex
-- PR Segment and ST Segment
+The job also returns two PDFs: a summary report and labeled tracings.
 
-## Analyize EDF
+## Setup
 
-### Setup
-
-You will need to have Python installed and pip.
+You will need Python and pip.
 
 ```
 git clone https://github.com/NeuralCloudSolutions/ecg-tutorials.git
@@ -28,93 +27,91 @@ cd ecg-tutorials
 pip install -r requirements.txt
 ```
 
-Next you will need to create an account on NeuralCloud.
+Next, create an account on NeuralCloud:
 
 1. Go to https://app.theneuralcloud.com
 2. Sign up
-3. You will then receive an email and you will need to confirm your email
-4. Sign in and go to the billings page
+3. Confirm your email address from the email you receive
+4. Sign in and go to the billing page
 5. Select a plan and enter your billing information
-6. Go to "API Keys" and create a new API Key
-7. Save the key in .env (see .env.sample)
+6. Go to "API Keys" and create a new API key
+7. Save the key in `.env` (see `.env.sample`)
 
-### Running Analysis
-
-```
-python analyze_edf.py --edf example_output/original_ecg.edf
-```
-
-By default the files from the analysis will be saved in the folder `out`. You can change the output path using the following:
+## Running the analysis
 
 ```
-python analyze_edf.py --edf example_output/original_ecg.edf --out my_output_folder
+python analyze_edf.py --edf example_files/mitdb_100_60s.edf
 ```
 
-### Batch Run
+The outputs are saved to `out/` (`report.h5`, `report.pdf`, `tracings.pdf`). Use `--out` to pick
+another folder.
 
-To run a batch job on multiple files:
-
-```
-python run_all_edfs.py --path path/to/input/edfs --out path/to/output/dir
-```
-
-We only support up to 12-lead ECGs. You can specify specific leads to analysis. For example if you want to only look at the first 3 leads you can run:
+We support up to 12-lead ECGs. To analyze only some leads, list them (1-based):
 
 ```
-python run_all_edfs.py --path path/to/input/edfs --out path/to/output/dir --leads 1,2,3
+python analyze_edf.py --edf my.edf --leads 1,2,3
 ```
 
-Warning, the lead selection will be applied to every file.
+### Batch run
 
-To see all options run:
-
-```
-python run_all_edfs.py -h
-```
-
-### Visualize
-
-You can create a PDF showing the PQRST labeling.
+To analyze every EDF in a folder (including sub-folders):
 
 ```
-python edf2pdf.py --edf example_output/original_ecg.edf --pqrst example_output/pqrst.csv
+python analyze_all_edfs.py --path path/to/input/edfs --out path/to/output/dir
 ```
 
-You can also view the entire ECG. Note that this method might not be reasonable for large files.
+Each EDF gets its own output folder, mirroring the input folders. `--leads` works here too and is
+applied to every file. A file that fails is reported and skipped.
+
+## Working with the H5 report
+
+[docs/FORMAT.md](docs/FORMAT.md) describes the file. The scripts in [examples/](examples/) show how to use
+it, and all run on the example reports in `example_files/`:
+
+| Script | What it shows |
+| --- | --- |
+| [examples/beat_list.py](examples/beat_list.py) | Convert the H5 beat list into Python objects |
+| [examples/beat_stats.py](examples/beat_stats.py) | Statistics on the beat table: intervals, rhythm, beat classes, HRV |
+| [examples/beat_table_to_csv.py](examples/beat_table_to_csv.py) | Write the beat table to CSV (`--peaks` adds the per-lead peaks) |
+| [examples/events_to_csv.py](examples/events_to_csv.py) | Write the rhythm, ectopic, pause and artifact events to CSV |
+| [examples/normal_beat.py](examples/normal_beat.py) | Find the normal beat with the beat encodings: average the 50 most typical beats |
+| [examples/closest_beat.py](examples/closest_beat.py) | Find the most typical single beat and plot its onsets, offsets and peaks |
+| [examples/report_h5.py](examples/report_h5.py) | The reading helpers the scripts share |
 
 ```
-python edf2pdf.py --edf example_output/original_ecg.edf --pqrst example_output/pqrst.csv --max_pages -1
+python examples/beat_list.py --h5 example_files/mitdb_100_60s_report.h5
+python examples/beat_stats.py --h5 example_files/mitdb_100_60s_report.h5
+python examples/beat_table_to_csv.py --h5 example_files/mitdb_100_60s_report.h5 --out out/beats.csv --peaks
+python examples/events_to_csv.py --h5 example_files/mitdb_221_60s_report.h5 --out out/events
+python examples/normal_beat.py --h5 example_files/mitdb_100_60s_report.h5 --edf example_files/mitdb_100_60s.edf --out out/normal_beat.png
+python examples/closest_beat.py --h5 example_files/mitdb_100_60s_report.h5 --edf example_files/mitdb_100_60s.edf --out out/closest_beat.png
 ```
 
-You can create a PDF showing the events.
+The results of every script on both example reports are in
+[example_outputs/](example_outputs/), one folder per record: the printed output (`.txt`), the CSVs
+and the plots.
 
-```
-python edf_events.py --edf example_output/original_ecg.edf --json example_output/analysis.json
-```
+The report contains no signal, so the two plotting scripts also need the EDF that was analyzed. If
+you analyzed with `--leads`, pass the same `--leads` to them, and pick the lead to plot with `--lead`
+(1-based, among the analyzed leads).
 
-You can create a PDF a mock report.
+Reference docs:
 
-```
-python edf_report.py --edf example_output/original_ecg.edf --json example_output/analysis.json
-```
+- [docs/BEAT_TABLE.md](docs/BEAT_TABLE.md): the beats, the beat table and the per-lead peaks
+- [docs/EVENTS.md](docs/EVENTS.md): the event tables
+- [docs/BEAT_ENCODING.md](docs/BEAT_ENCODING.md): the beat encoding and how to compare beat shapes
 
-### Stats
+## Example data
 
-```
-python calculate_averages.py --intervals example_output/intervals.csv
-```
+`example_files/` has the first 60 seconds of two records of the
+[MIT-BIH Arrhythmia Database](https://physionet.org/content/mitdb/1.0.0/) (2 leads, 360 Hz), each
+with its analysis:
 
-Output:
+| EDF | Report | Record |
+| --- | --- | --- |
+| `mitdb_100_60s.edf` | `mitdb_100_60s_report.h5` | Normal sinus rhythm with 2 PACs |
+| `mitdb_221_60s.edf` | `mitdb_221_60s_report.h5` | Atrial fibrillation with 12 PVCs |
 
-```
-Heart Rate                99.227244
-RR                       609.107335
-P Wave Duration           67.192666
-PR Segment                45.653085
-PR Interval              112.845751
-QRS Interval              70.949172
-T Wave Duration          168.340982
-ST Segment                73.928551
-QT Interval              313.218705
-QT Corrected (Bazett)    401.961588
-```
+> Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Eng in Med and Biol
+> 20(3):45-50 (May-June 2001). Goldberger A, et al. PhysioBank, PhysioToolkit, and PhysioNet.
+> Circulation 101(23):e215-e220 (2000).

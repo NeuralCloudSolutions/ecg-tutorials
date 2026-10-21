@@ -1,0 +1,10 @@
+74 encoded good-quality beats on lead 1
+Cosine similarity to the normal shape of the 50 closest: 0.9760 .. 0.9976
+Saved example_outputs/mitdb_100_60s/normal_beat.png
+
+Mean intervals of the chosen beats (ms; 0 = not measured, left out)
+  rr              813  (50 of 50 beats)
+  pr              165  (50 of 50 beats)
+  qrs_duration     81  (50 of 50 beats)
+  qt              389  (50 of 50 beats)
+  qtc             431  (50 of 50 beats)

@@ -1,0 +1,18 @@
+Beat 30 at 24.51 s, cosine similarity 0.9976 to the average shape
+
+Onsets and offsets (ms from start of recording)
+  P        24344 .. 24440
+  QRS      24508 .. 24592
+  T        24712 .. 24896
+Saved example_outputs/mitdb_100_60s/closest_beat.png
+
+Intervals (ms)
+  rr            844
+  pr            164
+  qrs_duration  84
+  qt            388
+  qtc           422
+  hr (bpm)      75
+
+Shape
+  QRS qRs, T biphasic, ST at J+60 -0.050 mV

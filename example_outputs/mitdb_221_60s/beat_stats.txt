@@ -1,0 +1,39 @@
+Report version     2.0.0 (2026-09-24)
+Analyzed           0.02 h, 2 lead(s)
+Beats              78
+Good-quality beats 78 (100.0%)
+
+Intervals (good-quality beats, 0 / NaN dropped)
+                  n  mean   std    p1  median    p99
+HR (bpm)         78  78.6   4.5  69.4    79.6   85.6
+RR (ms)          77 767.2 200.7 407.2   748.0 1266.7
+P duration (ms)   2  66.0  14.1  56.2    66.0   75.8
+PR (ms)           2 100.0  22.6  84.3   100.0  115.7
+PR segment (ms)   2  34.0   8.5  28.1    34.0   39.9
+QRS (ms)         78 100.1  30.6  80.0    88.0  180.9
+ST segment (ms)  78 110.6  31.7  29.2   120.0  144.0
+QT (ms)          78 399.9  14.3 363.4   404.0  420.9
+QTc Bazett (ms)  77 468.8  58.5 354.4   464.6  585.1
+
+Clinical metrics stored in the report
+  average_hr_overall      78.3
+  pr_mean                 100.0
+  qrs_mean                100.1
+  qtc_average             468.8
+  hrv_sdnn                80.3
+  hrv_rmssd               159.6
+  hrv_pnn50               100.0
+  qtc_prolonged_episodes  41.0
+
+Beats by dominant rhythm
+                 beats  mean_hr  mean_qrs  percent
+dominant_rhythm                                   
+AF                  78     78.6     100.1    100.0
+
+Beats by class (pac_score / pvc_score >= 0.5)
+beat_class
+N      66
+PVC    12
+Wide QRS (> 120 ms): 12
+
+HRV: fewer than two RR intervals between normal, non-AF beats in the beat table

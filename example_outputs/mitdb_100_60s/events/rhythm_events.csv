@@ -1,0 +1,2 @@
+id,type,start_ms,end_ms,duration_ms,start_beat,end_beat,beat_count,confidence,hr_mean,hr_min,hr_max,good_quality_fraction,initial_score,pr_mean_ms,pr_present_fraction,pr_std_ms,qrs_mean_ms,qrs_wide_count,qtc_mean,rr_irregularity_mean,rr_mean_ms,rr_std_ms,brad_fraction,mean_af_probability,onset_hr,p_wave_fraction,peak_hr,pr_drift_index,tach_fraction,trough_hr
+0,NSR,172,59860,59688,0,73,74,0.9992948,73.79873,71.42857,74.668144,1.0,1.0,163.72974,1.0,7.2732334,81.08108,0,431.7462,0.055743244,812.16437,38.02487,0.0,0.0,0.0,0.0,0.0,7.2732334,0.0,0.0

@@ -1,0 +1,17 @@
+78 beats
+
+Beat(index=0, qrs=Wave(start=572, end=660), p_waves=[], t=Wave(start=788, end=952))
+Beat(index=1, qrs=Wave(start=1184, end=1272), p_waves=[], t=Wave(start=1392, end=1556))
+Beat(index=2, qrs=Wave(start=1596, end=1772), p_waves=[], t=Wave(start=1812, end=2012))
+Beat(index=3, qrs=Wave(start=2520, end=2612), p_waves=[], t=Wave(start=2728, end=2940))
+Beat(index=4, qrs=Wave(start=3400, end=3496), p_waves=[], t=Wave(start=3616, end=3804))
+
+Beats with a P wave:            2
+Beats with more than one P:     0
+Beats without a T wave:         0
+
+Beat 7:
+  P duration   56 ms
+  PR interval  84 ms
+  QRS duration 88 ms
+  QT interval  384 ms
